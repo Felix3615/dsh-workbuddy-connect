@@ -13,6 +13,7 @@ import { chatUserAgent, fallbackChatIdentity, resolveChatIdentity, type ChatIden
 import type { WorkBuddyCredential } from './auth.ts'
 import type { ProbeAttempt } from './probe.ts'
 import { PROBE_MAX_TOKENS, PROBE_PROMPT } from './probe.ts'
+import { rewriteHarnessPrompt } from './prompt-rewrite.ts'
 
 /** WorkBuddy region selected by the credential's login domain. */
 export type WorkBuddyRegion = 'cn' | 'global'
@@ -546,13 +547,20 @@ function identityHeaders(credential: WorkBuddyCredential): Record<string, string
  * Normalize an OpenAI chat-completions body for the WorkBuddy upstream:
  * force `stream: true` (the upstream rejects non-streaming), flatten
  * `tool_choice` (the upstream's field is a string; object forms return 400),
- * and rewrite `developer` messages as `system`.
+ * rewrite `developer` messages as `system`, and replace the Harness's identity
+ * sentence in prompt-bearing messages (see `prompt-rewrite.ts`).
  *
  * The `developer` rewrite is load-bearing: pi-ai emits the system prompt as
  * `role: "developer"` (the OpenAI convention it adopted), but the WorkBuddy
  * upstream rejects that role with HTTP 400 code 11128 ("Illegal API
  * invocation from an unapproved channel"). Rewriting to `system` is the
  * compatible spelling the upstream accepts.
+ *
+ * The prompt rewrite runs after the role rename so it sees the role the
+ * upstream will see, and applies to both regions: the CN path reaches
+ * `chatStream` through this function alone, and the international path calls
+ * it again inside `prepareInternationalChatBody` — a second pass is a no-op
+ * because the sentence it targets is no longer present.
  */
 export function prepareChatBody(source: string): string {
   let body: unknown
@@ -565,6 +573,7 @@ export function prepareChatBody(source: string): string {
   const obj = body as Record<string, unknown>
   obj['stream'] = true
   normalizeDeveloperRole(obj)
+  rewriteHarnessPrompt(obj)
   normalizeToolChoice(obj)
   return JSON.stringify(obj)
 }

@@ -138,6 +138,11 @@ export {
   type WorkBuddyUpstreamModel,
 } from './upstream.ts'
 export {
+  HARNESS_PROMPT_REPLACEMENT,
+  HARNESS_PROMPT_SENTENCE,
+  rewriteHarnessPrompt,
+} from './prompt-rewrite.ts'
+export {
   WORKBUDDY_HOST_HEARTBEAT_FILENAME,
   clearHostHeartbeat,
   isHeartbeatProcessAlive,
