@@ -2,13 +2,26 @@
 
 English | [中文](./README.md)
 
-## Maintenance discontinued
+## Local maintenance notes
+
+The original author, @corrinehu, announced the end of maintenance on October 20, 2026 (after WorkBuddy began restricting requests from unofficial clients) and took the repository offline on October 22, 2026, as announced. The original notice is archived below.
+
+Since then this copy has been maintained by me, locally and for my own use only: I adapt and verify it against the DSH core I actually run, publish nothing to npm, and accept no outside requests. Current local status:
+
+- **Target core**: `0.2.1-rc.3` (retargeted from `0.2.1-rc.2` on 2026-10-26 — the six DSH service peers and devDependencies pinned exactly; typecheck and the full test suite pass, but the original project's Desktop acceptance process was not run)
+- **Plugin version**: `0.8.0` (bumped from 0.7.9 on 2026-10-26 to distinguish the locally maintained line; npm's final release 0.7.9 targeted `0.2.1-rc.2`, and the npm channel is frozen along with the upstream project — no further updates)
+- **Install source**: locally built artifacts from this repository (`lib/`); see "Install" below
+
+<details>
+<summary>Original maintenance-discontinued notice (archived)</summary>
 
 Starting October 20, 2026, WorkBuddy began restricting requests from unofficial clients. From a technical perspective, this kind of check is not difficult to get past. However, the model credits come with restrictions on where they can be used. WorkBuddy has made clear that it wants to distinguish its official client from third-party access, and this project respects that boundary and will not continue adapting to these checks. Using the official WorkBuddy client is, of course, the safest option.
 
 Due to limited personal time and energy, this project is no longer maintained, effective immediately. New feature requests and PRs will no longer be handled, and updates, compatibility fixes, and issue support will no longer be provided. The project repository is scheduled to go offline on **October 22, 2026 (Beijing time)**.
 
 Many thanks to everyone who used the plugin, shared feedback, and contributed, especially those who helped test, investigate problems, and submit PRs. It has been a pleasure to see this little plugin make things easier for you!
+
+</details>
 
 ---
 
@@ -164,7 +177,9 @@ The plugin version must match the DSH core — a mismatched combination fails to
 | `0.1.2-rc.1` | `0.3.1` | Older line, historical maintenance only. |
 | `0.1.1-rc.2` | `0.2.6` | Older line, historical maintenance only. |
 
-Release history (full records at [releases](https://github.com/corrinehu/dsh-workbuddy-connect/releases)):
+Release history (the upstream repository is offline; links are kept for archival reference only):
+
+- **0.8.0 (local maintenance, 2026-10-26)**: the plugin version is bumped from 0.7.9 to distinguish the locally maintained line from npm's final 0.7.9; the six DSH service peers and devDependencies are retargeted exactly from `0.2.1-rc.2` to `0.2.1-rc.3`, with `@earendil-works/pi-ai` kept at 1.3.0; the version-guard tests and the third-party notices (THIRD_PARTY_NOTICES.txt) are synced. Typecheck and all 883 tests pass; nothing is published to npm.
 
 - **0.7.9**: restores the international edition's maximum-context switch on DSH 0.2.1-rc.2, including delayed initialization and persistent settings (PR [#172](https://github.com/corrinehu/dsh-workbuddy-connect/pull/172), by @1Dreamer666); avoids fetch-blocked local ports that could cause international-edition 502 errors (PR [#164](https://github.com/corrinehu/dsh-workbuddy-connect/pull/164), by @Xiong-Ziyi); combines credit packages with the same name to reduce repeated entries.
 - **0.7.8**: adapts to DSH 0.2.1-rc.2; bundles the official atomic-write helper instead of relying on host module exposure; refreshes the China catalog snapshot and distinguishes Hy3 / Hy3-X; improves probe result labels and fixes the credit-refresh placement and tooltip. Thanks to @chenpiyanghappy for PR [#156](https://github.com/corrinehu/dsh-workbuddy-connect/pull/156).
@@ -178,9 +193,9 @@ Release history (full records at [releases](https://github.com/corrinehu/dsh-wor
 - **0.7.0**: adapts to DSH 0.2.0's settings-service rework and drops 0.1.x support.
 - **0.6.5**: final release of the 0.1.x line.
 
-Pinned-version install example: `dsh plugin --profile web add dsh-workbuddy-connect@0.7.9`.
+Local install example: `dsh plugin --profile web add /Users/Felix/Desktop/workspace/dsh/dsh-workbuddy-connect`; historical npm install example: `dsh plugin --profile web add dsh-workbuddy-connect@0.7.9`.
 
-**pi-ai versions are per core line and must not be mixed**: the 0.2.1-rc.1 / rc.2 core lines (plugin 0.7.7 / 0.7.8–0.7.9 respectively) moved to `@earendil-works/pi-ai` 1.3.0 (bundled by the plugin), so a profile-level leftover `overrides: {'@earendil-works/pi-ai': '0.87.1'}` **must be removed** or the plugin fails to load; the 0.2.0-rc.2 core line (plugin 0.7.6) still requires `^0.87.1` — on that line, **do not** upgrade the profile-level pi-ai to 1.x, and do not act on third-party plugin managers' "updatable" prompts, which do not check peer constraints ([#86](https://github.com/corrinehu/dsh-workbuddy-connect/issues/86)).
+**pi-ai versions are per core line and must not be mixed**: the 0.2.1-rc.1 / rc.2 / rc.3 core lines (plugin 0.7.7 / 0.7.8–0.7.9 / the locally maintained build respectively) moved to `@earendil-works/pi-ai` 1.3.0 (bundled by the plugin), so a profile-level leftover `overrides: {'@earendil-works/pi-ai': '0.87.1'}` **must be removed** or the plugin fails to load; the 0.2.0-rc.2 core line (plugin 0.7.6) still requires `^0.87.1` — on that line, **do not** upgrade the profile-level pi-ai to 1.x, and do not act on third-party plugin managers' "updatable" prompts, which do not check peer constraints ([#86](https://github.com/corrinehu/dsh-workbuddy-connect/issues/86)).
 
 ## Disclaimer
 

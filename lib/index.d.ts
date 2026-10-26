@@ -449,13 +449,20 @@ declare function regionOf(domain: string): WorkBuddyRegion;
  * Normalize an OpenAI chat-completions body for the WorkBuddy upstream:
  * force `stream: true` (the upstream rejects non-streaming), flatten
  * `tool_choice` (the upstream's field is a string; object forms return 400),
- * and rewrite `developer` messages as `system`.
+ * rewrite `developer` messages as `system`, and replace the Harness's identity
+ * sentence in prompt-bearing messages (see `prompt-rewrite.ts`).
  *
  * The `developer` rewrite is load-bearing: pi-ai emits the system prompt as
  * `role: "developer"` (the OpenAI convention it adopted), but the WorkBuddy
  * upstream rejects that role with HTTP 400 code 11128 ("Illegal API
  * invocation from an unapproved channel"). Rewriting to `system` is the
  * compatible spelling the upstream accepts.
+ *
+ * The prompt rewrite runs after the role rename so it sees the role the
+ * upstream will see, and applies to both regions: the CN path reaches
+ * `chatStream` through this function alone, and the international path calls
+ * it again inside `prepareInternationalChatBody` — a second pass is a no-op
+ * because the sentence it targets is no longer present.
  */
 declare function prepareChatBody(source: string): string;
 /** Provenance of one successful catalog fetch, surfaced by the status card. */
@@ -1648,6 +1655,48 @@ declare class WorkBuddyProbeService {
   probe(modelId: string, manualConsent?: boolean): Promise<WorkBuddyProbeStatus>;
 }
 //#endregion
+//#region src/prompt-rewrite.d.ts
+/**
+ * Rewrite the Harness's own identity sentence on its way to WorkBuddy.
+ *
+ * The system prompt belongs to DSH, not to this plugin: it arrives over the
+ * OpenAI-compatible wire as a `system` message (pi-ai emits it as `developer`,
+ * which {@link prepareChatBody} renames one step earlier) and is forwarded
+ * upstream verbatim. This module is the single seam where that sentence is
+ * replaced, so nothing else in the pipeline has to know about it.
+ *
+ * Scope rules, both deliberate:
+ *
+ * - **Only prompt-bearing messages are touched.** Rewriting user or assistant
+ *   text would corrupt a conversation and could rewrite a quoted copy of the
+ *   sentence the user is discussing; the identity sentence is prompt-only.
+ * - **Only the exact sentence is replaced.** The Harness's system prompt is far
+ *   longer than this one line, so the surrounding instruction is preserved
+ *   byte for byte and the rewrite stays a wording change rather than a
+ *   replacement prompt.
+ *
+ * Idempotent: after one pass the sentence is gone, so re-running (the
+ * international path hands an already-prepared body to
+ * {@link prepareInternationalChatBody}, which calls `prepareChatBody` again)
+ * changes nothing.
+ *
+ * @module dsh-workbuddy-connect/prompt-rewrite
+ */
+/** The Harness's own identity sentence as it reaches the wire. */
+declare const HARNESS_PROMPT_SENTENCE = "You are an AI agent powered by DeepSeek Harness";
+/** What that sentence becomes before the request leaves this plugin. */
+declare const HARNESS_PROMPT_REPLACEMENT = "Is now F's PC, You are an AI agent powered by DSH";
+/**
+ * Apply the rewrite to an already-parsed chat-completions body.
+ *
+ * Mutates `body` in place, exactly as the other `prepare*` helpers in
+ * `upstream.ts` do, and tolerates any shape: a body without `messages`, with a
+ * non-array `messages`, or with malformed entries is simply left unchanged.
+ *
+ * @returns whether the body was rewritten.
+ */
+declare function rewriteHarnessPrompt(body: Record<string, unknown>): boolean;
+//#endregion
 //#region src/host-heartbeat.d.ts
 /**
  * Host-side heartbeat: a small JSON file written under `$DSH_HOME` once the
@@ -1801,4 +1850,4 @@ declare function visibilityAccountOf(credential: Pick<WorkBuddyCredential, 'uid'
  */
 declare function apply(ctx: Context, config: Config): void;
 //#endregion
-export { AI_VARIANT, type AppVersionInfo, CN_APP_VERSION_FILENAME, CN_VARIANT, type ChatIdentity, Config, FALLBACK_CN_APP_VERSION, FALLBACK_WORKBUDDY_AI_MODELS, FALLBACK_WORKBUDDY_MODELS, PROBE_EFFORT_CANDIDATES, type ProbeAttempt, type ProbeOutcome, type ProbeSender, type ResolveChatIdentityOptions, type UpstreamErrorKind, WORKBUDDY_AI_SETTINGS_NS, WORKBUDDY_APP_VERSION_FILENAME, WORKBUDDY_AUTH_FILENAME, WORKBUDDY_AUTH_FILE_ENV, WORKBUDDY_CATALOG_FILENAME, WORKBUDDY_HOST_HEARTBEAT_FILENAME, WORKBUDDY_PROBE_FILENAME, WORKBUDDY_PROVIDER, WORKBUDDY_SETTINGS_NS, WORKBUDDY_STREAM_IDLE_TIMEOUT_MS, WORKBUDDY_VARIANTS, WORKBUDDY_VISIBILITY_FILENAME, type WorkBuddyAdapter, type WorkBuddyAppVersionSource, type WorkBuddyAuthStatus, WorkBuddyCatalog, type WorkBuddyCatalogFetch, WorkBuddyCatalogStore, type WorkBuddyChatResult, type WorkBuddyCredential, WorkBuddyCredentialStore, type WorkBuddyCredits, type WorkBuddyEffort, type WorkBuddyHostHeartbeat, type WorkBuddyModelBilling, type WorkBuddyModelInfo, type WorkBuddyModelReasoning, type WorkBuddyProbeRecord, WorkBuddyProbeService, type WorkBuddyProbeStatus, WorkBuddyProbeStore, type WorkBuddyProbeValidation, type WorkBuddyPromotion, type WorkBuddyRefreshOutcome, type WorkBuddyShim, WorkBuddyUpstreamClient, type WorkBuddyUpstreamModel, type WorkBuddyVariant, WorkBuddyVisibilityStore, appUserAgent, apply, chatUserAgent, classifyUpstreamError, clearHostHeartbeat, createWorkBuddyAdapter, createWorkBuddyShim, defaultDesktopAuthCandidates, defaultDesktopAuthPath, desktopAuthCandidatesFor, fallbackChatIdentity, fingerprintModel, inject, installedAppVersion, isHeartbeatProcessAlive, modelWithCurrentPromotion, name, normalizeCredits, parseModelCatalog, parseWorkBuddyAuth, prepareChatBody, prepareCnChatBody, prepareInternationalChatBody, probeModel, processStartTimeMs, randomSentinel, readBundleVersion, readCliVersion, readHostHeartbeat, regionOf, resolveAppVersion, resolveChatIdentity, validAppVersion, validCliVersion, variantFor, visibilityAccountOf, workbuddyCatalogPath, workbuddyHostHeartbeatPath, workbuddyOwnAuthPath, workbuddyProbePath, workbuddyVisibilityPath };
+export { AI_VARIANT, type AppVersionInfo, CN_APP_VERSION_FILENAME, CN_VARIANT, type ChatIdentity, Config, FALLBACK_CN_APP_VERSION, FALLBACK_WORKBUDDY_AI_MODELS, FALLBACK_WORKBUDDY_MODELS, HARNESS_PROMPT_REPLACEMENT, HARNESS_PROMPT_SENTENCE, PROBE_EFFORT_CANDIDATES, type ProbeAttempt, type ProbeOutcome, type ProbeSender, type ResolveChatIdentityOptions, type UpstreamErrorKind, WORKBUDDY_AI_SETTINGS_NS, WORKBUDDY_APP_VERSION_FILENAME, WORKBUDDY_AUTH_FILENAME, WORKBUDDY_AUTH_FILE_ENV, WORKBUDDY_CATALOG_FILENAME, WORKBUDDY_HOST_HEARTBEAT_FILENAME, WORKBUDDY_PROBE_FILENAME, WORKBUDDY_PROVIDER, WORKBUDDY_SETTINGS_NS, WORKBUDDY_STREAM_IDLE_TIMEOUT_MS, WORKBUDDY_VARIANTS, WORKBUDDY_VISIBILITY_FILENAME, type WorkBuddyAdapter, type WorkBuddyAppVersionSource, type WorkBuddyAuthStatus, WorkBuddyCatalog, type WorkBuddyCatalogFetch, WorkBuddyCatalogStore, type WorkBuddyChatResult, type WorkBuddyCredential, WorkBuddyCredentialStore, type WorkBuddyCredits, type WorkBuddyEffort, type WorkBuddyHostHeartbeat, type WorkBuddyModelBilling, type WorkBuddyModelInfo, type WorkBuddyModelReasoning, type WorkBuddyProbeRecord, WorkBuddyProbeService, type WorkBuddyProbeStatus, WorkBuddyProbeStore, type WorkBuddyProbeValidation, type WorkBuddyPromotion, type WorkBuddyRefreshOutcome, type WorkBuddyShim, WorkBuddyUpstreamClient, type WorkBuddyUpstreamModel, type WorkBuddyVariant, WorkBuddyVisibilityStore, appUserAgent, apply, chatUserAgent, classifyUpstreamError, clearHostHeartbeat, createWorkBuddyAdapter, createWorkBuddyShim, defaultDesktopAuthCandidates, defaultDesktopAuthPath, desktopAuthCandidatesFor, fallbackChatIdentity, fingerprintModel, inject, installedAppVersion, isHeartbeatProcessAlive, modelWithCurrentPromotion, name, normalizeCredits, parseModelCatalog, parseWorkBuddyAuth, prepareChatBody, prepareCnChatBody, prepareInternationalChatBody, probeModel, processStartTimeMs, randomSentinel, readBundleVersion, readCliVersion, readHostHeartbeat, regionOf, resolveAppVersion, resolveChatIdentity, rewriteHarnessPrompt, validAppVersion, validCliVersion, variantFor, visibilityAccountOf, workbuddyCatalogPath, workbuddyHostHeartbeatPath, workbuddyOwnAuthPath, workbuddyProbePath, workbuddyVisibilityPath };
