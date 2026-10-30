@@ -8,8 +8,8 @@ The original author, @corrinehu, announced the end of maintenance on October 20,
 
 Since then this copy has been maintained by me, locally and for my own use only: I adapt and verify it against the DSH core I actually run, publish nothing to npm, and accept no outside requests. Current local status:
 
-- **Target core**: `0.2.1-rc.3` (retargeted from `0.2.1-rc.2` on 2026-10-26 — the six DSH service peers and devDependencies pinned exactly; typecheck and the full test suite pass, but the original project's Desktop acceptance process was not run)
-- **Plugin version**: `0.8.0` (bumped from 0.7.9 on 2026-10-26 to distinguish the locally maintained line; npm's final release 0.7.9 targeted `0.2.1-rc.2`, and the npm channel is frozen along with the upstream project — no further updates)
+- **Target core**: `0.2.1-rc.5` (retargeted from `0.2.1-rc.3` on 2026-10-30 — the six DSH service peers and devDependencies pinned exactly; typecheck and the full test suite pass, but the original project's Desktop acceptance process was not run)
+- **Plugin version**: `0.8.1` (bumped from 0.8.0 on 2026-10-30, continuing the locally maintained line that started at 0.7.9; npm's final release 0.7.9 targeted `0.2.1-rc.2`, and the npm channel is frozen along with the upstream project — no further updates)
 - **Install source**: locally built artifacts from this repository (`lib/`); see "Install" below
 
 <details>
@@ -167,8 +167,14 @@ llm-workbuddy:
 
 The plugin version must match the DSH core — a mismatched combination fails to start DSH — and the Desktop app picks its plugin version by the bundled core. The newest npm release is not necessarily right for you: match your actual core first.
 
+**Since 0.8.1 the load gate is `engines.dsh`** (`>=0.2.1-rc.5 <0.3.0`). DSH's compatibility check (`unmetRequirements` in `@deepseek-ai/dsh-app-boot`) compares the `@deepseek-ai/dsh-*` peers one by one only when that field is **absent**; when it is present the range decides alone and the peers are ignored (prereleases participate, `includePrerelease: true`). Cores after rc.5 — every later `0.2.1-rc.N` and any 0.2.x release — therefore need no version edit at all; the exact peers below merely record the core this line was verified on.
+
+**The gate checks versions, not APIs**: passing the range is not proof of compatibility. After a core bump still run `pnpm run typecheck && pnpm run test`; crossing to `0.3.0` requires re-verification and an update to that one `engines.dsh` range.
+
 | DSH core | Recommended plugin | Notes |
 |---|---|---|
+| `0.2.1-rc.5` | `0.8.1` (local build) | Newest local retarget: the six DSH service peers are pinned to rc.5 exactly; typecheck and the full test suite pass, but the original Desktop acceptance was not run. |
+| `0.2.1-rc.3` | `0.8.0` (local build) | Previous local build: peers pinned to rc.3, so DSH refuses to load it on an rc.5 core. |
 | `0.2.1-rc.2` | `0.7.9` | Targets this core only; `0.2.0-rc.2` and `0.2.1-rc.2` differ. Check the core bundled in your Desktop app. |
 | `0.2.1-rc.1` | `0.7.7` | The core moved to `@earendil-works/pi-ai` 1.3.0, so the plugin bundles 1.3.0 too — a leftover 0.87.1 overrides entry must be removed (see the pi-ai note below). |
 | `0.2.0-rc.2` | `0.7.6` | Previous core line; fixes enterprise catalog gaps and international chat requests blocked by the upstream channel check. Avoid 0.7.2 with its registry regression. |
@@ -179,6 +185,7 @@ The plugin version must match the DSH core — a mismatched combination fails to
 
 Release history (the upstream repository is offline; links are kept for archival reference only):
 
+- **0.8.1 (local maintenance, 2026-10-30)**: adapts to DSH `0.2.1-rc.5`: the six DSH service peers and devDependencies are retargeted exactly from `0.2.1-rc.3` to `0.2.1-rc.5` (rc.5's `dsh-llm-pi-ai` declares `@earendil-works/pi-ai ^1.1.0`, which the bundled 1.3.0 still satisfies, so pi-ai is not bumped); the version-guard tests, third-party notices, README version tables and install notes are synced. Typecheck and all 883 tests pass; nothing is published to npm.
 - **0.8.0 (local maintenance, 2026-10-26)**: the plugin version is bumped from 0.7.9 to distinguish the locally maintained line from npm's final 0.7.9; the six DSH service peers and devDependencies are retargeted exactly from `0.2.1-rc.2` to `0.2.1-rc.3`, with `@earendil-works/pi-ai` kept at 1.3.0; the version-guard tests and the third-party notices (THIRD_PARTY_NOTICES.txt) are synced. Typecheck and all 883 tests pass; nothing is published to npm.
 
 - **0.7.9**: restores the international edition's maximum-context switch on DSH 0.2.1-rc.2, including delayed initialization and persistent settings (PR [#172](https://github.com/corrinehu/dsh-workbuddy-connect/pull/172), by @1Dreamer666); avoids fetch-blocked local ports that could cause international-edition 502 errors (PR [#164](https://github.com/corrinehu/dsh-workbuddy-connect/pull/164), by @Xiong-Ziyi); combines credit packages with the same name to reduce repeated entries.
@@ -195,7 +202,7 @@ Release history (the upstream repository is offline; links are kept for archival
 
 Local install example: `dsh plugin --profile web add /Users/Felix/Desktop/workspace/dsh/dsh-workbuddy-connect`; historical npm install example: `dsh plugin --profile web add dsh-workbuddy-connect@0.7.9`.
 
-**pi-ai versions are per core line and must not be mixed**: the 0.2.1-rc.1 / rc.2 / rc.3 core lines (plugin 0.7.7 / 0.7.8–0.7.9 / the locally maintained build respectively) moved to `@earendil-works/pi-ai` 1.3.0 (bundled by the plugin), so a profile-level leftover `overrides: {'@earendil-works/pi-ai': '0.87.1'}` **must be removed** or the plugin fails to load; the 0.2.0-rc.2 core line (plugin 0.7.6) still requires `^0.87.1` — on that line, **do not** upgrade the profile-level pi-ai to 1.x, and do not act on third-party plugin managers' "updatable" prompts, which do not check peer constraints ([#86](https://github.com/corrinehu/dsh-workbuddy-connect/issues/86)).
+**pi-ai versions are per core line and must not be mixed**: the 0.2.1-rc.1 / rc.2 / rc.3–rc.5 core lines (plugin 0.7.7 / 0.7.8–0.7.9 / the 0.8.x locally maintained builds respectively) moved to `@earendil-works/pi-ai` 1.3.0 (bundled by the plugin), so a profile-level leftover `overrides: {'@earendil-works/pi-ai': '0.87.1'}` **must be removed** or the plugin fails to load; the 0.2.0-rc.2 core line (plugin 0.7.6) still requires `^0.87.1` — on that line, **do not** upgrade the profile-level pi-ai to 1.x, and do not act on third-party plugin managers' "updatable" prompts, which do not check peer constraints ([#86](https://github.com/corrinehu/dsh-workbuddy-connect/issues/86)).
 
 ## Disclaimer
 

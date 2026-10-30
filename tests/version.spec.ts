@@ -71,7 +71,7 @@ describe('peer manifest pins the verified DSH cores', () => {
    * means editing this list after a real run, not letting a caret do it.
    * Since 0.7.7 the list was 0.2.1-rc.1 alone: 0.2.0-rc.2 cannot be
    * smoke-tested anymore alongside it, and an untested arm is support
-   * nobody verified. This candidate targets 0.2.1-rc.3 and bundles the
+   * nobody verified. This candidate targets 0.2.1-rc.5 and bundles the
    * official atomic-write helper. Local checks do not replace Desktop
    * acceptance testing.
    *
@@ -84,6 +84,14 @@ describe('peer manifest pins the verified DSH cores', () => {
    * peer range was not enough, because a peer is only a claim about what the
    * *installer* should provide. pi-ai is therefore a pinned regular
    * dependency now; the assertion below pins that shape.
+   *
+   * The peers stay exact, but they no longer decide whether DSH loads the
+   * plugin: since 0.8.1 `engines.dsh` carries the accepted core range and the
+   * host's compatibility gate reads *only* that when it is present
+   * (`dsh-app-boot`: "An own `engines.dsh` range decides alone and
+   * peerDependencies are ignored"). That is what stops a core bump from
+   * turning every install into a manual retarget, while the exact peers keep
+   * recording the one core this line was actually verified on.
    */
   const DSH_SERVICE_PEERS = [
     '@deepseek-ai/dsh-attachment',
@@ -99,8 +107,23 @@ describe('peer manifest pins the verified DSH cores', () => {
       readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
     ) as { peerDependencies: Record<string, string> }
     for (const name of DSH_SERVICE_PEERS) {
-      expect(pkg.peerDependencies[name], `${name} missing from peerDependencies`).toBe('0.2.1-rc.3')
+      expect(pkg.peerDependencies[name], `${name} missing from peerDependencies`).toBe('0.2.1-rc.5')
     }
+  })
+
+  it('declares the accepted core range in engines.dsh, which the host gate reads first', () => {
+    // The range is what a core bump is measured against: it must include the
+    // peer line this build was verified on and must not silently admit the
+    // next minor (0.3.0 is where an API break is expected, so it needs a run).
+    const pkg = JSON.parse(
+      readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
+    ) as { engines: Record<string, string>, peerDependencies: Record<string, string> }
+    expect(pkg.engines['dsh']).toBe('>=0.2.1-rc.5 <0.3.0')
+    // The range's lower bound is the core the exact peers record as verified,
+    // so the two can never drift into "accepts a core nobody built against".
+    const verified = pkg.peerDependencies['@deepseek-ai/dsh-llm']
+    expect(verified).toBe('0.2.1-rc.5')
+    expect(pkg.engines['dsh']!.startsWith(`>=${verified} `)).toBe(true)
   })
 
   it('bundles the official atomic-write helper instead of requiring a host peer', () => {
@@ -109,7 +132,7 @@ describe('peer manifest pins the verified DSH cores', () => {
     const pkg = JSON.parse(
       readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
     ) as { peerDependencies: Record<string, string>, devDependencies: Record<string, string> }
-    expect(pkg.devDependencies['@deepseek-ai/dsh-atomic-write']).toBe('0.2.1-rc.3')
+    expect(pkg.devDependencies['@deepseek-ai/dsh-atomic-write']).toBe('0.2.1-rc.5')
     expect(pkg.peerDependencies['@deepseek-ai/dsh-atomic-write']).toBeUndefined()
   })
 
